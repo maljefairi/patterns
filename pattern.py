@@ -15,10 +15,12 @@ import sys
 # Configure tqdm to write to stderr for better visibility
 progress_bar = lambda x, **kwargs: tqdm(x, file=sys.stderr, **kwargs)
 
+print("Loading models...")
 # Load models silently
 nlp = spacy.load("en_core_web_lg")
 tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased", local_files_only=False)
 model = AutoModel.from_pretrained("bert-base-uncased", local_files_only=False)
+print("Models loaded successfully")
 
 # Initialize files
 dataset_file = 'thinking_patterns.csv'
@@ -46,7 +48,7 @@ def generate_random_topic():
     topics = {
         'technology': [
             "Artificial General Intelligence development",
-            "Neural architecture search",
+            "Neural architecture search", 
             "Quantum computing advances",
             "Web 3.0 and decentralization",
             "Machine consciousness theories",
@@ -55,7 +57,7 @@ def generate_random_topic():
         'science': [
             "Cognitive architecture models",
             "Brain-computer interfaces",
-            "Quantum cognition theories",
+            "Quantum cognition theories", 
             "Neuromorphic computing",
             "Artificial life evolution",
             "Computational neuroscience"
@@ -264,17 +266,22 @@ def save_progress(completed, total):
 
 def main():
     try:
+        print("Loading progress...")
         completed_records, total_records = load_progress()
+        print(f"Starting from record {completed_records} of {total_records}")
         
         if not os.path.exists(dataset_file):
+            print("Creating new dataset...")
             dataset = pd.DataFrame(columns=['Timestamp', 'Topic', 'Pattern', 'Vector', 'LLM_Analysis'])
         else:
+            print("Loading existing dataset...")
             dataset = pd.read_csv(dataset_file)
             
         target_accuracy = 0.8
         current_accuracy = 0
         
         while current_accuracy < target_accuracy:
+            print(f"\nProcessing records {completed_records} to {total_records}...")
             for _ in progress_bar(range(completed_records, total_records)):
                 topic = generate_random_topic()
                 thought = simulate_thinking(topic)
@@ -297,6 +304,7 @@ def main():
                     dataset.to_csv(dataset_file, index=False)
             
             dataset.to_csv(dataset_file, index=False)
+            print("\nBenchmarking patterns...")
             benchmark_results = []
             
             for idx, row in progress_bar(dataset.iterrows(), 
@@ -317,15 +325,27 @@ def main():
                 np.mean(metrics['architectural_coherence']),
                 np.mean(metrics['web_recognition'])
             ])
+
+            print("\nCurrent Scores:")
+            print(f"AGI Alignment: {np.mean(metrics['agi_alignment']):.3f}")
+            print(f"Architectural Coherence: {np.mean(metrics['architectural_coherence']):.3f}")
+            print(f"Web Recognition: {np.mean(metrics['web_recognition']):.3f}")
+            print(f"Vector Quality: {np.mean(metrics['vector_quality']):.3f}")
+            print(f"Overall Accuracy: {current_accuracy:.3f}")
             
             if current_accuracy < target_accuracy:
                 total_records += 100
+                print(f"\nAccuracy below target. Increasing total records to {total_records}")
                 
+        print("\nSaving final benchmark results...")
         with open(benchmark_file, 'w') as f:
             json.dump(benchmark_results, f)
+        print("Process completed successfully")
         
     except Exception as e:
+        print(f"\nError occurred: {str(e)}")
         save_progress(completed_records, total_records)
+        raise
 
 if __name__ == "__main__":
     main()
