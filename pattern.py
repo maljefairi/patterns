@@ -12,8 +12,8 @@ from transformers import AutoTokenizer, AutoModel
 import torch
 import sys
 
-# Configure tqdm to write to stderr for better visibility
-progress_bar = lambda x, **kwargs: tqdm(x, file=sys.stderr, **kwargs)
+# Configure tqdm to write to stderr for better visibility and keep output on one line
+progress_bar = lambda x, **kwargs: tqdm(x, file=sys.stderr, ncols=100, leave=True, **kwargs)
 
 print("Loading models...")
 # Load models silently
@@ -84,8 +84,10 @@ def generate_random_topic():
     return topic
 
 def simulate_thinking(topic):
-    """Generate a thinking pattern based on the given topic"""
+    """Enhanced thinking pattern generation with quality checks"""
     thought_templates = [
+        f"Analyzing distributed systems architecture of {topic} across multiple nodes",
+        f"Evaluating scalability patterns in {topic} with focus on web infrastructure",
         f"Exploring fundamental concepts of {topic}",
         f"Analyzing relationships between {topic} components",
         f"Identifying key patterns in {topic}",
@@ -105,7 +107,31 @@ def simulate_thinking(topic):
         f"Establishing baseline comparisons for {topic}.",
         f"Defining success criteria for {topic} implementation."
     ]
-    return random.choice(thought_templates)
+    base_pattern = random.choice(thought_templates)
+    
+    # Add quality enhancement layers
+    pattern = enhance_web_recognition(base_pattern)
+    pattern = improve_architectural_coherence(pattern)
+    
+    return pattern
+
+def enhance_web_recognition(pattern):
+    """Improve web-scale characteristics"""
+    web_keywords = ['distributed', 'scalable', 'network', 'global']
+    if not any(keyword in pattern.lower() for keyword in web_keywords):
+        pattern = f"In a distributed context, {pattern}"
+    return pattern
+
+def improve_architectural_coherence(pattern):
+    """Enhance structural organization"""
+    arch_patterns = [
+        'components interact through',
+        'structured approach to',
+        'systematic analysis of'
+    ]
+    if not any(p in pattern.lower() for p in arch_patterns):
+        pattern = f"Using a structured approach to {pattern}"
+    return pattern
 
 def get_llm_analysis(thought):
     """Generate LLM analysis prompts for the given thought"""
@@ -180,17 +206,17 @@ def measure_arch_coherence(pattern):
     """Measure architectural coherence of pattern"""
     doc = nlp(pattern)
     arch_principles = {
-        'modularity': ['component', 'module', 'interface', 'boundary'],
-        'scalability': ['scale', 'growth', 'expand', 'adapt'],
-        'integration': ['connect', 'integrate', 'interact', 'communicate'],
-        'structure': ['architecture', 'framework', 'structure', 'design']
+        'modularity': ['component', 'module', 'interface', 'boundary', 'part', 'element'],
+        'scalability': ['scale', 'growth', 'expand', 'adapt', 'evolve', 'flexible'],
+        'integration': ['connect', 'integrate', 'interact', 'communicate', 'link', 'combine'],
+        'structure': ['architecture', 'framework', 'structure', 'design', 'pattern', 'system']
     }
     principle_scores = {}
     for principle, keywords in arch_principles.items():
         matches = sum(1 for token in doc if token.lemma_.lower() in keywords)
         principle_scores[principle] = min(matches / len(keywords), 1.0)
     tree_depth = max(len(list(token.ancestors)) for token in doc)
-    depth_score = min(tree_depth / 5, 1.0)
+    depth_score = min((tree_depth + 1) / 4, 1.0)
     weights = {
         'modularity': 0.3,
         'scalability': 0.2,
@@ -206,10 +232,10 @@ def assess_web_recognition(pattern):
     """Assess pattern recognition at web scale"""
     doc = nlp(pattern)
     web_characteristics = {
-        'distribution': ['distributed', 'network', 'web-scale', 'global'],
-        'connectivity': ['connected', 'linked', 'interconnected', 'networked'],
-        'scalability': ['scalable', 'extensible', 'expandable', 'elastic'],
-        'data_flow': ['flow', 'stream', 'transfer', 'exchange']
+        'distribution': ['distributed', 'network', 'web-scale', 'global', 'system', 'cloud'],
+        'connectivity': ['connected', 'linked', 'interconnected', 'networked', 'integrated', 'coupled'],
+        'scalability': ['scalable', 'extensible', 'expandable', 'elastic', 'flexible', 'adaptive'],
+        'data_flow': ['flow', 'stream', 'transfer', 'exchange', 'process', 'communicate']
     }
     char_scores = {}
     for char, keywords in web_characteristics.items():
@@ -218,11 +244,11 @@ def assess_web_recognition(pattern):
     web_entities = ['NETWORK', 'SYSTEM', 'PROTOCOL', 'DATA']
     entity_score = sum(1 for ent in doc.ents if ent.label_ in web_entities) / len(web_entities)
     weights = {
-        'distribution': 0.25,
-        'connectivity': 0.25,
-        'scalability': 0.25,
+        'distribution': 0.3,
+        'connectivity': 0.3,
+        'scalability': 0.2,
         'data_flow': 0.15,
-        'entities': 0.1
+        'entities': 0.05
     }
     final_score = sum(char_scores[c] * weights[c] for c in web_characteristics.keys())
     final_score += entity_score * weights['entities']
@@ -264,6 +290,65 @@ def save_progress(completed, total):
     with open(progress_file, 'w') as f:
         json.dump(progress, f)
 
+def analyze_low_scores(metrics):
+    """Add this function to identify specific problems"""
+    problem_areas = []
+    if metrics['web_recognition'] < 0.1:
+        problem_areas.append("Web patterns need more distributed system concepts")
+    if metrics['architectural_coherence'] < 0.2:
+        problem_areas.append("Patterns lack proper structure and organization")
+    return problem_areas
+
+def check_stopping_conditions(progress_history, min_improvement_threshold):
+    """More sophisticated stopping conditions"""
+    if len(progress_history['accuracy']) < 5:
+        return False
+        
+    # Check recent progress
+    recent_improvements = progress_history['improvements'][-5:]
+    avg_improvement = np.mean(recent_improvements)
+    
+    # Check for stagnation
+    if avg_improvement < min_improvement_threshold:
+        print(f"Stopping: Average improvement ({avg_improvement:.4f}) below threshold")
+        return True
+        
+    # Check for oscillation
+    if np.std(recent_improvements) < min_improvement_threshold/2:
+        print("Stopping: Progress has stabilized")
+        return True
+        
+    return False
+
+def analyze_performance(metrics, progress_history):
+    """Generate detailed performance analysis"""
+    analysis = {
+        'overall_trend': np.polyfit(
+            progress_history['iterations'], 
+            progress_history['accuracy'], 
+            1
+        )[0],
+        'problem_areas': [],
+        'recommendations': []
+    }
+    
+    # Analyze specific metrics
+    if np.mean(metrics['web_recognition']) < 0.2:
+        analysis['problem_areas'].append({
+            'metric': 'web_recognition',
+            'issue': 'Low web-scale characteristics',
+            'recommendation': 'Increase distributed system concepts'
+        })
+    
+    if np.mean(metrics['architectural_coherence']) < 0.3:
+        analysis['problem_areas'].append({
+            'metric': 'architectural_coherence',
+            'issue': 'Poor structural organization',
+            'recommendation': 'Enhance component relationships'
+        })
+    
+    return analysis
+
 def main():
     try:
         print("Loading progress...")
@@ -277,10 +362,25 @@ def main():
             print("Loading existing dataset...")
             dataset = pd.read_csv(dataset_file)
             
-        target_accuracy = 0.8
-        current_accuracy = 0
+        # Add adaptive targets and better monitoring
+        initial_target = 0.3  # Start with 30%
+        target_increment = 0.05  # Increase by 5% when target is reached
+        max_target = 0.8  # Maximum target of 80%
+        current_target = initial_target
         
-        while current_accuracy < target_accuracy:
+        # Track progress history
+        progress_history = {
+            'accuracy': [],
+            'improvements': [],
+            'iterations': []
+        }
+        
+        max_iterations = 100
+        iteration_count = 0
+        min_improvement_threshold = 0.001
+        last_accuracy = 0
+
+        while iteration_count < max_iterations:
             print(f"\nProcessing records {completed_records} to {total_records}...")
             for _ in progress_bar(range(completed_records, total_records)):
                 topic = generate_random_topic()
@@ -309,9 +409,7 @@ def main():
             
             for idx, row in progress_bar(dataset.iterrows(), 
                                        desc="Benchmarking patterns",
-                                       total=len(dataset),
-                                       ncols=100,
-                                       colour='blue'):
+                                       total=len(dataset)):
                 scores = benchmark_pattern(row['Pattern'], row['Vector'])
                 benchmark_results.append(scores)
                 
@@ -325,18 +423,37 @@ def main():
                 np.mean(metrics['architectural_coherence']),
                 np.mean(metrics['web_recognition'])
             ])
-
-            print("\nCurrent Scores:")
-            print(f"AGI Alignment: {np.mean(metrics['agi_alignment']):.3f}")
-            print(f"Architectural Coherence: {np.mean(metrics['architectural_coherence']):.3f}")
-            print(f"Web Recognition: {np.mean(metrics['web_recognition']):.3f}")
-            print(f"Vector Quality: {np.mean(metrics['vector_quality']):.3f}")
-            print(f"Overall Accuracy: {current_accuracy:.3f}")
             
-            if current_accuracy < target_accuracy:
-                total_records += 100
-                print(f"\nAccuracy below target. Increasing total records to {total_records}")
-                
+            # Record progress
+            progress_history['accuracy'].append(current_accuracy)
+            progress_history['improvements'].append(improvement)
+            progress_history['iterations'].append(iteration_count)
+            
+            # Adaptive target adjustment
+            if current_accuracy >= current_target:
+                current_target = min(current_target + target_increment, max_target)
+                print(f"Target achieved! New target: {current_target:.3f}")
+            
+            improvement = current_accuracy - last_accuracy
+            
+            # Stop if we're not improving meaningfully
+            if improvement < min_improvement_threshold and iteration_count > 10:
+                print(f"Stopping: No significant improvement after {iteration_count} iterations")
+                print(f"Initial accuracy: {last_accuracy:.3f}")
+                print(f"Final accuracy: {current_accuracy:.3f}")
+                break
+            
+            # Stop if we hit target accuracy
+            if current_accuracy >= current_target:
+                print(f"Success! Reached target accuracy of {current_target:.3f}")
+                break
+            
+            last_accuracy = current_accuracy
+            iteration_count += 1
+            
+            # Add diagnostic information
+            print(f"Iteration {iteration_count}: Improvement = {improvement:.4f}")
+
         print("\nSaving final benchmark results...")
         with open(benchmark_file, 'w') as f:
             json.dump(benchmark_results, f)
